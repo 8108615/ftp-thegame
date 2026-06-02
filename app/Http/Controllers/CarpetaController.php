@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Auth;
 
 class CarpetaController extends Controller
 {
-    /**
-     * Listar carpetas raíz del usuario
-     */
     public function index()
     {
         $carpetas = Carpeta::where('user_id', Auth::id())
@@ -20,14 +17,9 @@ class CarpetaController extends Controller
         return view('admin.carpetas.index', compact('carpetas'));
     }
 
-    /**
-     * Guardar una nueva carpeta
-     */
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255'
-        ]);
+        $request->validate(['nombre' => 'required|string|max:255']);
 
         Carpeta::create([
             'nombre'    => $request->nombre,
@@ -38,48 +30,46 @@ class CarpetaController extends Controller
         return back()->with('success', 'Carpeta creada correctamente.');
     }
 
-    /**
-     * Manejar la subida de archivos grandes por fragmentos (Chunks)
-     */
     public function uploadChunk(Request $request)
     {
-        $file = $request->file('file');
-        $chunkIndex = (int) $request->input('chunk_index');
-        $totalChunks = (int) $request->input('total_chunks');
-        $fileName = $request->input('file_name');
-        $carpetaId = $request->input('carpeta_id');
+        $fileName = $request->input('resumableFilename');
+        $chunkIndex = $request->input('resumableChunkNumber');
+        $totalChunks = $request->input('resumableTotalChunks');
 
-        // Carpeta temporal única: storage/app/temp/user_id/nombre_archivo/
-        $tempDir = storage_path('app/temp/' . Auth::id() . '/' . $fileName);
-
-        if (!file_exists($tempDir)) {
-            mkdir($tempDir, 0777, true);
+        // 1. Usamos una carpeta temporal en el storage de Laravel para mayor seguridad
+        $tempPath = storage_path('app/temp/');
+        if (!file_exists($tempPath)) {
+            mkdir($tempPath, 0777, true);
         }
 
-        // Guardamos el fragmento (chunk) dentro de esa carpeta
-        $file->move($tempDir, 'part_' . $chunkIndex);
+        // 2. Guardar el trozo actual
+        $request->file('file')->move($tempPath, $fileName . '.part' . $chunkIndex);
 
-        // Verificamos si es el último fragmento para ensamblar
-        if ($chunkIndex == $totalChunks - 1) {
-            $finalDir = storage_path('app/uploads/' . $carpetaId);
-            if (!file_exists($finalDir)) {
-                mkdir($finalDir, 0777, true);
-            }
+        // 3. Verificar si es el último trozo
+        if ($chunkIndex == $totalChunks) {
 
-            $finalPath = $finalDir . '/' . $fileName;
-            $out = fopen($finalPath, 'wb');
+            set_time_limit(0);
+            ini_set('memory_limit', '2048M');
 
-            for ($i = 0; $i < $totalChunks; $i++) {
-                $partPath = $tempDir . '/part_' . $i;
-                fwrite($out, file_get_contents($partPath));
-                unlink($partPath); // Borrar fragmento
+            // Definimos la ruta final en public/uploads
+            $finalPath = public_path('uploads/' . $fileName);
+            $out = fopen($finalPath, 'ab');
+
+            for ($i = 1; $i <= $totalChunks; $i++) {
+                $chunkFile = $tempPath . $fileName . '.part' . $i;
+
+                if (file_exists($chunkFile)) {
+                    $in = fopen($chunkFile, 'rb');
+                    stream_copy_to_stream($in, $out, 1024 * 1024);
+                    fclose($in);
+                    unlink($chunkFile); // Borramos el trozo
+                }
             }
             fclose($out);
-            rmdir($tempDir); // Borrar carpeta temporal del archivo
 
-            return response()->json(['message' => 'Archivo subido y ensamblado con éxito']);
+            return response()->json(['message' => 'Archivo ensamblado correctamente en public/uploads']);
         }
 
-        return response()->json(['message' => 'Fragmento ' . $chunkIndex . ' recibido']);
+        return response()->json(['message' => 'Trozo recibido']);
     }
 }

@@ -46,7 +46,10 @@
             // 2. CONFIGURACIÓN DE RESUMABLE
             let r = new Resumable({
                 target: '{{ route('admin.carpetas.upload') }}',
-                chunkSize: 5 * 1024 * 1024, // 5MB
+                chunkSize: 1 * 1024 * 1024, // Reducido a 1MB (Más pequeño = más estable ante cortes)
+                simultaneousUploads: 1,      // ¡CRÍTICO! Sube solo un trozo a la vez para no saturar Apache
+                maxChunkRetries: 5,          // Reintentar si un trozo falla
+                chunkRetryInterval: 2000,    // Esperar 2 segundos antes de reintentar
                 testChunks: false,
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                 query: { carpeta_id: 1 }
