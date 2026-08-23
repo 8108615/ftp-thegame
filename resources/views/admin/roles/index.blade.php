@@ -18,10 +18,12 @@
 @section('content')
     <div class="page-heading">
         <div class="d-flex justify-content-between align-items-center">
-            <h3>Roles</h3>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
-                <i class="bi bi-plus-circle"></i> Nuevo rol
-            </button>
+            @can('Guardar rol')
+                <h3>Roles</h3>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                    <i class="bi bi-plus-circle"></i> Nuevo rol
+                </button>
+            @endcan
         </div>
     </div>
 
@@ -72,15 +74,38 @@
                                             <td>{{ $roles->firstItem() + $loop->index }}</td>
                                             <td>{{ $rol->name }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                                    data-bs-target="#editRoleModal-{{ $rol->id }}">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
+                                                @can('Actualizar rol')
+                                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                                        data-bs-target="#editRoleModal-{{ $rol->id }}">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
+                                                @endcan
 
-                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal"
-                                                    data-bs-target="#deleteRoleModal-{{ $rol->id }}">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                                @can('Editar permisos de rol')
+                                                    <a href="{{ route('admin.roles.permisos', $rol->id) }}" class="btn btn-sm btn-info">
+                                                        <i class="bi bi-shield-lock"></i> Permisos
+                                                    </a>
+                                                @endcan
+
+
+                                                @can('Eliminar rol')
+                                                    @php
+                                                        // Ajusta 'SUPER ADMIN' al nombre exacto que tengas en tu BD
+                                                        $isSuperAdminRole = $rol->name === 'SUPER ADMIN';
+                                                    @endphp
+
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-danger"
+                                                            data-bs-toggle="{{ $isSuperAdminRole ? '' : 'modal' }}"
+                                                            data-bs-target="#deleteRoleModal-{{ $rol->id }}"
+                                                            {{ $isSuperAdminRole ? 'disabled' : '' }}
+                                                            title="{{ $isSuperAdminRole ? 'El rol Super Admin no se puede eliminar' : '' }}">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                @endcan
+
+
+
                                             </td>
                                         </tr>
                                     @empty

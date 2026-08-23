@@ -183,9 +183,11 @@
                     </div>
 
                     <div class="mt-3 d-flex justify-content-end">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check2-circle"></i> Guardar ajustes
-                        </button>
+                        @can('editar_ajustes')
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check2-circle"></i> Guardar ajustes
+                            </button>
+                        @endcan
                     </div>
                 </form>
             </div>

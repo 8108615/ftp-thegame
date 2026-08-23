@@ -6,11 +6,15 @@ use App\Models\Ajuste;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class AjusteController extends Controller
 {
+    use AuthorizesRequests;
     public function index()
     {
+        $this->authorize('editar_ajustes');
+
         $divisas = $this->getDivisas();
         $configuracion = Ajuste::query()->first();
 
@@ -19,6 +23,8 @@ class AjusteController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('editar_ajustes');
+
         $divisas = $this->getDivisas();
 
         $validated = $request->validate([

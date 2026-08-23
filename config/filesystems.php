@@ -47,6 +47,18 @@ return [
             'report' => false,
         ],
 
+        'videos_d' => [
+            'driver' => 'local',
+            'root'   => 'D:/videos', // Cambiado a barra normal
+            'throw'  => false,
+        ],
+        'videos_e' => [
+            'driver' => 'local',
+            'root'   => 'E:/videos 1', // Cambiado a barra normal
+            'throw'  => false,
+        ],
+
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

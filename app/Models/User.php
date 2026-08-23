@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -30,4 +30,20 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function archivos()
+    {
+        return $this->hasMany(Archivo::class);
+    }
+
+    public function carpetasCompartidas() {
+        return $this->belongsToMany(Carpeta::class, 'carpeta_usuario', 'user_id', 'carpeta_id')
+                    ->withPivot('permiso');
+    }
+
+    // AGREGA ESTA NUEVA RELACIÓN PARA ARCHIVOS
+    public function archivosCompartidos() {
+        return $this->belongsToMany(Archivo::class, 'archivo_user', 'user_id', 'archivo_id');
+    }
+
 }

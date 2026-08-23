@@ -19,13 +19,15 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleSeeder::class,
+            PermissionSeeder::class,
             AjusteSeeder::class,
 
         ]);
 
         $admin = User::firstOrCreate(
             ['email' => 'erick@gmail.com'],
-            ['name' => 'Erick Morales', 'password' => bcrypt('12345678')]
+            ['name' => 'Erick Morales', 'password' => bcrypt('12345678'), 'avatar' => null]
+
         );
 
         $superAdminRole = Role::query()->firstOrCreate([

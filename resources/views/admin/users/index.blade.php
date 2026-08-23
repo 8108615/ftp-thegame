@@ -18,9 +18,11 @@
     <div class="page-heading">
         <div class="d-flex justify-content-between align-items-center">
             <h3>Usuarios</h3>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                <i class="bi bi-plus-circle"></i> Nuevo usuario
-            </button>
+            @can('crear_usuarios')
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                    <i class="bi bi-plus-circle"></i> Nuevo usuario
+                </button>
+            @endcan
         </div>
     </div>
 
@@ -61,6 +63,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 80px;">#</th>
+                                        <th style="width: 80px;">Foto</th>
                                         <th>Nombre</th>
                                         <th>Correo</th>
                                         <th>Rol</th>
@@ -71,20 +74,44 @@
                                     @forelse ($users as $user)
                                         <tr>
                                             <td>{{ $users->firstItem() + $loop->index }}</td>
+                                            <td>
+                                                @if($user->avatar)
+                                                    <img src="{{ asset('storage/' . $user->avatar) }}" alt="Foto" width="40" height="40" class="rounded-circle" style="object-fit: cover;">
+                                                @else
+                                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="bi bi-person-fill"></i>
+                                                    </div>
+                                                @endif
+                                            </td>
                                             <td>{{ $user->name }}</td>
                                             <td>{{ $user->email }}</td>
                                             <td>{{ optional($user->roles->first())->name ?? 'Sin rol' }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                                    data-bs-target="#editUserModal-{{ $user->id }}">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </button>
+                                                @can('editar_usuarios')
+                                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                                        data-bs-target="#editUserModal-{{ $user->id }}">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </button>
+                                                @endcan
 
-                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal"
-                                                    data-bs-target="#deleteUserModal-{{ $user->id }}"
-                                                    {{ (int) $user->id === (int) auth()->id() ? 'disabled' : '' }}>
+                                                @can('eliminar_usuarios')
+
+                                                    @php
+                                                        // Verificamos si es el mismo usuario logueado O si el usuario en la fila es Super Admin
+                                                        $isSelf = (int) $user->id === (int) auth()->id();
+                                                        $isSuperAdmin = $user->hasRole('Super Admin');
+                                                        $isDisabled = $isSelf || $isSuperAdmin;
+                                                    @endphp
+
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-danger"
+                                                        data-bs-toggle="{{ $isDisabled ? '' : 'modal' }}"
+                                                        data-bs-target="#deleteUserModal-{{ $user->id }}"
+                                                        {{ $isDisabled ? 'disabled' : '' }}
+                                                        title="{{ $isSuperAdmin ? 'No se puede eliminar al Super Admin' : ($isSelf ? 'No puedes eliminarte a ti mismo' : '') }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
+                                                @endcan
                                             </td>
                                         </tr>
                                     @empty
@@ -118,7 +145,7 @@
 
     <div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-            <form class="modal-content" method="POST" action="{{ route('admin.users.store') }}">
+            <form class="modal-content" method="POST" action="{{ route('admin.users.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" style="color:white">Crear usuario</h5>
@@ -198,6 +225,17 @@
                                 class="form-control" placeholder="Repita la contrasena" required>
                         </div>
                     </div>
+                    <div class="form-group mb-2">
+                        <label for="avatar">Foto de perfil</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-image-fill"></i></span>
+                            <input type="file" name="avatar" id="avatar-input" class="form-control" accept="image/*" onchange="previewImage(event)">
+                        </div>
+                        <img id="avatar-preview" src="#" alt="Vista previa" class="mt-2 rounded-circle" style="display:none; width: 100px; height: 100px; object-fit: cover;">
+                        @error('avatar')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
                 </div>
 
                 <div class="modal-footer">
@@ -215,7 +253,7 @@
 
         <div class="modal fade" id="editUserModal-{{ $user->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
-                <form class="modal-content" method="POST" action="{{ route('admin.users.update', $user->id) }}">
+                <form class="modal-content" method="POST" action="{{ route('admin.users.update', $user->id) }}" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
                     <div class="modal-header bg-success text-white">
@@ -299,6 +337,22 @@
                                     placeholder="Repita la contrasena nueva">
                             </div>
                         </div>
+                        <div class="form-group mb-2">
+                            <label for="avatar">Foto de perfil</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-image-fill"></i></span>
+                                <input type="file" name="avatar" id="avatar-input-{{ $user->id }}"
+                                    class="form-control" accept="image/*" onchange="previewImage(event, '{{ $user->id }}')">
+                            </div>
+                            <img id="avatar-preview-{{ $user->id }}"
+                                src="{{ $user->avatar ? asset('storage/' . $user->avatar) : '#' }}"
+                                alt="Vista previa"
+                                class="mt-2 rounded-circle"
+                                style="{{ $user->avatar ? 'display:block;' : 'display:none;' }} width: 100px; height: 100px; object-fit: cover;">
+                            @error('avatar')
+                                <small class="text-danger">{{ $message }}</small>
+                            @enderror
+                        </div>
                     </div>
 
                     <div class="modal-footer">
@@ -353,5 +407,23 @@
             const modal = new bootstrap.Modal(modalElement);
             modal.show();
         })();
+
+        function previewImage(event, userId = '') {
+            const suffix = userId ? `-${userId}` : '';
+            const preview = document.getElementById(`avatar-preview${suffix}`);
+
+            // Verificamos que existan archivos antes de intentar leerlos
+            if (event.target.files && event.target.files[0]) {
+                const reader = new FileReader();
+
+                reader.onload = function() {
+                    preview.src = reader.result;
+                    preview.style.display = 'block';
+                }
+
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        }
+
     </script>
 @endpush

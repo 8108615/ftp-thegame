@@ -1,95 +1,70 @@
 @extends('layouts.admin')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('assets/compiled/css/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/compiled/css/app-dark.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/compiled/css/auth.css') }}">
+    <style>
+        /* Eliminamos márgenes y aseguramos pantalla completa */
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow-x: hidden; }
+
+        /* Contenedor principal tipo Flexbox */
+        .full-wrapper { display: flex; height: 100vh; width: 100vw; }
+
+        /* Lado Izquierdo: Formulario */
+        .left-side {
+            width: 100%;
+            max-width: 450px;
+            background-color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            z-index: 10;
+        }
+
+        /* Lado Derecho: Imagen */
+        .right-side {
+            flex-grow: 1;
+            /* Usamos ruta absoluta para evitar errores de compilación */
+            background-image: url('{{ asset('assets/images/UM_THEGAME.jpg') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* Ocultar lado derecho en móviles */
+        @media (max-width: 991px) {
+            .right-side { display: none; }
+            .left-side { max-width: 100%; }
+        }
+    </style>
 @endpush
 
 @section('content')
-    <div id="auth">
-        <div class="row h-100 g-0">
-            <div class="col-lg-5 col-12">
-                <div id="auth-left" class="px-4 px-lg-5 py-5">
-                    <div class="auth-logo mb-4">
-                        <a href="{{ url('/') }}">
-                            <img src="{{ asset('assets/compiled/svg/logo.svg') }}" alt="Logo">
-                        </a>
-                    </div>
-
-                    <h1 class="auth-title">{{ __('Login') }}</h1>
-                    <p class="auth-subtitle mb-5">{{ __('Log in with your credentials to continue.') }}</p>
-
-                    <form method="POST" action="{{ route('login') }}">
-                        @csrf
-
-                        <div class="form-group position-relative has-icon-left mb-4">
-                            <input id="email" type="email"
-                                class="form-control form-control-xl @error('email') is-invalid @enderror" name="email"
-                                value="{{ old('email') }}" placeholder="{{ __('Email Address') }}" required
-                                autocomplete="email" autofocus>
-                            <div class="form-control-icon">
-                                <i class="bi bi-envelope"></i>
-                            </div>
-                            @error('email')
-                                <span class="invalid-feedback d-block" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group position-relative has-icon-left mb-4">
-                            <input id="password" type="password"
-                                class="form-control form-control-xl @error('password') is-invalid @enderror" name="password"
-                                placeholder="{{ __('Password') }}" required autocomplete="current-password">
-                            <div class="form-control-icon">
-                                <i class="bi bi-shield-lock"></i>
-                            </div>
-                            @error('password')
-                                <span class="invalid-feedback d-block" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="form-check form-check-lg d-flex align-items-end mb-3">
-                            <input class="form-check-input me-2" type="checkbox" name="remember" id="remember"
-                                {{ old('remember') ? 'checked' : '' }}>
-                            <label class="form-check-label text-gray-600" for="remember">
-                                {{ __('Remember Me') }}
-                            </label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-block btn-lg shadow-lg mt-4">
-                            {{ __('Login') }}
-                        </button>
-                    </form>
-
-                    <div class="text-center mt-5 text-lg fs-6">
-                        @if (Route::has('register'))
-                            <p class="text-gray-600">
-                                {{ __('Don\'t have an account?') }}
-                                <a href="{{ route('register') }}" class="font-bold">{{ __('Sign up') }}</a>
-                            </p>
-                        @endif
-
-                        @if (Route::has('password.request'))
-                            <p>
-                                <a class="font-bold"
-                                    href="{{ route('password.request') }}">{{ __('Forgot Your Password?') }}</a>
-                            </p>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-7 d-none d-lg-block">
-                <div id="auth-right"></div>
-            </div>
+<div class="full-wrapper">
+    <div class="left-side">
+        <div class="mb-5">
+            <img src="{{ asset('assets/images/logo_thegame.png') }}" alt="Logo" style="width: 450px; height: auto;">
         </div>
-    </div>
-@endsection
 
-@push('scripts')
-    <script src="{{ asset('assets/static/js/initTheme.js') }}"></script>
-@endpush
+        <h1 style="color: white; text-align: center; font-size: 3.5rem; margin-bottom: 0.5rem;">FTP <br> THE GAME</h1>
+        <p style="color: #94a3b8; margin-bottom: 2rem;">Ingresa tus credenciales para continuar.</p>
+
+        <form method="POST" action="{{ route('login') }}" style="width: 100%; max-width: 450px;">
+            @csrf
+            <div class="mb-4">
+                <label for="email">Correo Electrónico</label>
+                <input type="email" name="email" class="form-control" placeholder="Correo Electrónico" required>
+                @error('email') <small class="text-danger">{{ $message }}</small> @enderror
+            </div>
+            <div class="mb-4">
+                <label for="password">Contraseña</label>
+                <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
+                @error('password') <small class="text-danger">{{ $message }}</small> @enderror
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
+        </form>
+    </div>
+
+    <div class="right-side"></div>
+</div>
+@endsection
