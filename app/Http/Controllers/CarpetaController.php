@@ -94,17 +94,53 @@ class CarpetaController extends Controller
 
     private function sincronizarAutomaticamente($carpetaId)
     {
-        // Obtenemos el disco desde la carpeta, o default si es raíz
-        $carpetaActual = $carpetaId ? \App\Models\Carpeta::find($carpetaId) : null;
-        $diskName = $carpetaActual ? $carpetaActual->disk : 'videos_d';
-        $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
+        // Si estamos en la raíz ($carpetaId es null), sincronizamos ambos discos
+        if (!$carpetaId) {
+            $discosARecorrer = ['LIGA_BOLIVIANA_d', 'COMPLETOS_f'];
+            // Lista de carpetas del sistema que NUNCA debemos sincronizar
+            $carpetasIgnoradas = ['$RECYCLE.BIN', 'System Volume Information', 'Recovery', 'System.sav'];
+            
+            foreach ($discosARecorrer as $diskName) {
+                $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
+                $directoriosReales = $disk->directories(''); // Raíz del disco físico
 
-        $rutaRelativa = $carpetaActual ? $carpetaActual->getPath() : '';
+                foreach ($directoriosReales as $dir) {
+                    $nombreCarpeta = basename($dir);
+                    
+                    // Si la carpeta está en la lista negra o empieza con '$', la ignoramos
+                    if (in_array($nombreCarpeta, $carpetasIgnoradas) || str_starts_with($nombreCarpeta, '$')) {
+                        continue;
+                    }
+                    
+                    // Verificamos si ya existe en la BD como carpeta raíz en este disco específico
+                    $existe = \App\Models\Carpeta::where('nombre', $nombreCarpeta)
+                        ->whereNull('parent_id')
+                        ->where('disk', $diskName)
+                        ->exists();
+
+                    if (!$existe) {
+                        \App\Models\Carpeta::create([
+                            'nombre'    => $nombreCarpeta,
+                            'parent_id' => null,
+                            'disk'      => $diskName,
+                            'user_id'   => auth()->id()
+                        ]);
+                    }
+                }
+            }
+            return;
+        }
+
+        // --- RESTO DEL CÓDIGO PARA SUBCARPETAS ---
+        $carpetaActual = \App\Models\Carpeta::find($carpetaId);
+        $diskName = $carpetaActual ? $carpetaActual->disk : 'LIGA_BOLIVIANA_d';
+        $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
+        $rutaRelativa = $carpetaActual->getPath();
 
         // 1. LIMPIEZA
         $archivosEnBD = \App\Models\Archivo::where('carpeta_id', $carpetaId)
-                                        ->where('disk', $diskName) // Filtrar por disco
-                                        ->get();
+            ->where('disk', $diskName)
+            ->get();
         foreach ($archivosEnBD as $archivoBD) {
             if (!$disk->exists($archivoBD->ruta)) {
                 $archivoBD->delete();
@@ -118,12 +154,12 @@ class CarpetaController extends Controller
 
             if (!\App\Models\Archivo::where('ruta', $ruta)->where('disk', $diskName)->exists()) {
                 \App\Models\Archivo::create([
-                    'nombre' => basename($ruta),
-                    'ruta' => $ruta,
-                    'disk' => $diskName, // Guardamos el disco
-                    'mime_type' => $disk->mimeType($ruta),
+                    'nombre'     => basename($ruta),
+                    'ruta'       => $ruta,
+                    'disk'       => $diskName,
+                    'mime_type'  => $disk->mimeType($ruta),
                     'carpeta_id' => $carpetaId,
-                    'user_id' => auth()->id()
+                    'user_id'    => auth()->id()
                 ]);
             }
         }
@@ -133,14 +169,14 @@ class CarpetaController extends Controller
         foreach ($directoriosReales as $dir) {
             $nombreCarpeta = basename($dir);
             if (!\App\Models\Carpeta::where('nombre', $nombreCarpeta)
-                                    ->where('parent_id', $carpetaId)
-                                    ->where('disk', $diskName)
-                                    ->exists()) {
+                                        ->where('parent_id', $carpetaId)
+                                        ->where('disk', $diskName)
+                                        ->exists()) {
                 \App\Models\Carpeta::create([
-                    'nombre' => $nombreCarpeta,
+                    'nombre'    => $nombreCarpeta,
                     'parent_id' => $carpetaId,
-                    'disk' => $diskName, // Propagamos el disco
-                    'user_id' => auth()->id()
+                    'disk'      => $diskName,
+                    'user_id'   => auth()->id()
                 ]);
             }
         }
@@ -176,14 +212,14 @@ class CarpetaController extends Controller
         $request->merge(['nombre' => $nombreLimpio]);
         $request->validate([
             'nombre' => 'required|string|max:255|unique:carpetas,nombre,NULL,id,parent_id,' . ($request->parent_id ?: 'NULL'),
-            'disk'      => 'nullable|in:videos_d,videos_e',
+            'disk'      => 'nullable|in:LIGA_BOLIVIANA_d,COMPLETOS_f',
         ]);
 
         // LÓGICA DE DISCO:
         // 1. Si estamos dentro de una carpeta, heredamos su disco.
         // 2. Si estamos en la raíz, usamos el disco que venga del formulario (request->disk).
         $padre = $request->parent_id ? \App\Models\Carpeta::find($request->parent_id) : null;
-        $diskName = $padre ? $padre->disk : ($request->disk ?: 'videos_d');
+        $diskName = $padre ? $padre->disk : ($request->disk ?: 'LIGA_BOLIVIANA_d');
 
         // 3. Creamos en BD
         $carpeta = Carpeta::create([
@@ -237,8 +273,8 @@ class CarpetaController extends Controller
 
             $rutaDestino = $carpeta ? ($carpeta->getPath() . '/' . $fileName) : $fileName;
 
-            // Si hay carpeta, usamos su disco; si no, el default 'videos_d'
-            $diskName = $carpeta ? $carpeta->disk : 'videos_d';
+            // Si hay carpeta, usamos su disco; si no, el default 'LIGA_BOLIVIANA_d'
+            $diskName = $carpeta ? $carpeta->disk : 'LIGA_BOLIVIANA_d';
 
             // 3. Mover al disco (USANDO STREAMING)
             $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
@@ -453,7 +489,7 @@ class CarpetaController extends Controller
 
         $destinoId = ($request->carpeta_destino_id == 0 || $request->carpeta_destino_id == 'null') ? null : $request->carpeta_destino_id;
         $destino = $destinoId ? \App\Models\Carpeta::find($destinoId) : null;
-        $discoDestino = $destino ? $destino->disk : 'videos_d';
+        $discoDestino = $destino ? $destino->disk : 'LIGA_BOLIVIANA_d';
 
         // --- LÓGICA PARA ARCHIVOS ---
         if ($request->tipo === 'archivo') {
@@ -599,8 +635,8 @@ class CarpetaController extends Controller
 
         // 2. Determinamos el disco dinámicamente desde la BD.
         // Si tu columna en BD se llama de otra forma, cambia 'disk' por el nombre correcto.
-        // Si algún archivo antiguo no tiene esta columna, ponemos 'videos_d' como respaldo (fallback).
-        $diskName = $archivo->disk ?? 'videos_d';
+        // Si algún archivo antiguo no tiene esta columna, ponemos 'LIGA_BOLIVIANA_d' como respaldo (fallback).
+        $diskName = $archivo->disk ?? 'LIGA_BOLIVIANA_d';
 
         // 3. Verificamos que el disco configurado exista realmente en config/filesystems.php
         if (!config()->has("filesystems.disks.{$diskName}")) {
@@ -626,46 +662,71 @@ class CarpetaController extends Controller
         $archivo = \App\Models\Archivo::find($id);
         if (!$archivo) abort(404);
 
-        // Obtenemos el disco dinámico desde la BD
         $disk = \Illuminate\Support\Facades\Storage::disk($archivo->disk);
 
-        // 1. Verificamos existencia a través del sistema de archivos de Laravel
+        // 1. Verificamos existencia
         if (!$disk->exists($archivo->ruta)) {
             abort(404, "El video no existe en el disco: " . $archivo->disk);
         }
 
-        // 2. Obtenemos el tamaño mediante el disco
-        $size = $disk->size($archivo->ruta);
+        // 2. Obtenemos la ruta absoluta física en el disco (más eficiente y seguro para saltos grandes)
+        $filePath = $disk->path($archivo->ruta);
+        $size = filesize($filePath);
+        
         $start = 0;
         $end = $size - 1;
 
+        // 3. Procesar el rango solicitado por el navegador
         if (isset($_SERVER['HTTP_RANGE'])) {
             $range = str_replace('bytes=', '', $_SERVER['HTTP_RANGE']);
-            list($start, $end) = explode('-', $range);
-            $start = intval($start);
-            $end = ($end === '') ? $size - 1 : intval($end);
+            $rangeParts = explode('-', $range);
+            
+            $start = intval($rangeParts[0]);
+            
+            if (isset($rangeParts[1]) && is_numeric($rangeParts[1])) {
+                $end = intval($rangeParts[1]);
+            }
+        }
+
+        // Asegurar que los rangos sean válidos
+        if ($start >= $size || $end >= $size || $start > $end) {
+            return response()->stream(function () {}, 416, [
+                'Content-Range' => "bytes */$size"
+            ]);
         }
 
         $length = $end - $start + 1;
 
-        // 3. Abrimos el stream a través del disco
-        $stream = $disk->readStream($archivo->ruta);
-        fseek($stream, $start);
+        // 4. Retornar respuesta optimizada usando lectura directa por chunks
+        return response()->stream(function () use ($filePath, $start, $length) {
+            $stream = fopen($filePath, 'rb');
+            if ($stream === false) {
+                return;
+            }
 
-        // Retornamos el stream
-        return response()->stream(function () use ($stream, $length) {
+            // Posicionamiento preciso del puntero de bytes
+            fseek($stream, $start);
+
             $bytesSent = 0;
-            $bufferSize = 1024 * 1024; // 1MB
+            $bufferSize = 512 * 1024; // 512 KB por buffer para evitar sobrecarga de memoria
 
             while (!feof($stream) && $bytesSent < $length) {
-                $buffer = fread($stream, min($bufferSize, $length - $bytesSent));
+                $readLength = min($bufferSize, $length - $bytesSent);
+                $buffer = fread($stream, $readLength);
+                
+                if ($buffer === false) {
+                    break;
+                }
+
                 echo $buffer;
                 flush();
+                
                 $bytesSent += strlen($buffer);
             }
+
             fclose($stream);
         }, 206, [
-            'Content-Type' => 'video/mp4',
+            'Content-Type' => $archivo->mime_type ?: 'video/mp4',
             'Content-Length' => $length,
             'Accept-Ranges' => 'bytes',
             'Content-Range' => "bytes $start-$end/$size",

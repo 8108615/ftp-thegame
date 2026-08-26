@@ -18,7 +18,7 @@
     <div class="page-heading">
         <div class="d-flex justify-content-between align-items-center">
             <h3>Usuarios</h3>
-            @can('crear_usuarios')
+            @can('Guardar usuario')
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
                     <i class="bi bi-plus-circle"></i> Nuevo usuario
                 </button>
@@ -87,14 +87,14 @@
                                             <td>{{ $user->email }}</td>
                                             <td>{{ optional($user->roles->first())->name ?? 'Sin rol' }}</td>
                                             <td>
-                                                @can('editar_usuarios')
+                                                @can('Actualizar usuario')
                                                     <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
                                                         data-bs-target="#editUserModal-{{ $user->id }}">
                                                         <i class="bi bi-pencil-square"></i>
                                                     </button>
                                                 @endcan
 
-                                                @can('eliminar_usuarios')
+                                                @can('Eliminar usuario')
 
                                                     @php
                                                         // Verificamos si es el mismo usuario logueado O si el usuario en la fila es Super Admin
@@ -293,33 +293,57 @@
                             @endif
                         </div>
 
+
                         <div class="form-group mb-2">
-                            <label for="edit-role-{{ $user->id }}">Rol (*)</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-person-badge-fill"></i></span>
-                                <select name="role_id" id="edit-role-{{ $user->id }}" class="form-select" required>
-                                    <option value="">Seleccione un rol</option>
-                                    @foreach ($roles as $role)
-                                        <option value="{{ $role->id }}"
-                                            {{ (session('open_modal') === 'editUserModal-' . $user->id ? old('role_id', $currentRoleId) : $currentRoleId) == $role->id ? 'selected' : '' }}>
-                                            {{ $role->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            @if (session('open_modal') === 'editUserModal-' . $user->id)
-                                @error('role_id')
-                                    <small class="text-danger">{{ $message }}</small>
-                                @enderror
+                        <label for="edit-role-{{ $user->id }}">Rol (*)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-badge-fill"></i></span>
+
+                            @php
+                                // Verificamos si el usuario tiene el rol de SUPER ADMIN
+                                $isTargetSuperAdmin = $user->hasRole('SUPER ADMIN');
+
+                                // Obtenemos el ID del rol SUPER ADMIN directamente de la colección de roles
+                                $superAdminRole = $roles->firstWhere('name', 'SUPER ADMIN');
+                                $superAdminRoleId = $superAdminRole ? $superAdminRole->id : null;
+
+                                // Definimos qué ID de rol debe estar seleccionado (si es super admin, forzamos su ID)
+                                $selectedRoleId = $isTargetSuperAdmin ? $superAdminRoleId : $currentRoleId;
+                            @endphp
+
+                            <select name="role_id" id="edit-role-{{ $user->id }}" class="form-select" required {{ $isTargetSuperAdmin ? 'disabled' : '' }}>
+                                <option value="">Seleccione un rol</option>
+                                @foreach ($roles as $role)
+                                    <option value="{{ $role->id }}"
+                                        {{ (string) old('role_id', session('open_modal') === 'editUserModal-' . $user->id ? old('role_id') : $selectedRoleId) === (string) $role->id ? 'selected' : '' }}>
+                                        {{ $role->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            {{-- Input oculto para que viaje el ID del rol ya que el select está disabled --}}
+                            @if($isTargetSuperAdmin && $superAdminRoleId)
+                                <input type="hidden" name="role_id" value="{{ $superAdminRoleId }}">
                             @endif
                         </div>
 
+                        @if($isTargetSuperAdmin)
+                            <small class="text-muted">El rol de SUPER ADMIN no se puede modificar.</small>
+                        @endif
+
+                        @if (session('open_modal') === 'editUserModal-' . $user->id)
+                            @error('role_id')
+                                <small class="text-danger">{{ $message }}</small>
+                            @enderror
+                        @endif
+                    </div>
+
                         <div class="form-group mb-2">
-                            <label for="edit-password-{{ $user->id }}">Contrasena (opcional)</label>
+                            <label for="edit-password-{{ $user->id }}">Contraseña (opcional)</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                                 <input type="password" name="password" id="edit-password-{{ $user->id }}"
-                                    class="form-control" placeholder="Dejar vacio para mantener actual">
+                                    class="form-control" placeholder="Dejar vacío para mantener actual">
                             </div>
                             @if (session('open_modal') === 'editUserModal-' . $user->id)
                                 @error('password')
@@ -328,17 +352,18 @@
                             @endif
                         </div>
 
-                        <div class="form-group">
-                            <label for="edit-password-confirmation-{{ $user->id }}">Confirmar contrasena</label>
+                        <div class="form-group mb-2">
+                            <label for="edit-password-confirmation-{{ $user->id }}">Confirmar contraseña</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
                                 <input type="password" name="password_confirmation"
                                     id="edit-password-confirmation-{{ $user->id }}" class="form-control"
-                                    placeholder="Repita la contrasena nueva">
+                                    placeholder="Repita la contraseña nueva">
                             </div>
                         </div>
+
                         <div class="form-group mb-2">
-                            <label for="avatar">Foto de perfil</label>
+                            <label for="avatar-input-{{ $user->id }}">Foto de perfil</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-image-fill"></i></span>
                                 <input type="file" name="avatar" id="avatar-input-{{ $user->id }}"
@@ -362,6 +387,7 @@
                 </form>
             </div>
         </div>
+
 
         <div class="modal fade" id="deleteUserModal-{{ $user->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">

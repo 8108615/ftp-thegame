@@ -13,9 +13,10 @@ use Illuminate\Support\Facades\Storage;
 class UserController extends Controller
 {
     use AuthorizesRequests;
+
     public function index()
     {
-        $this->authorize('ver_usuarios');
+        $this->authorize('Ver listado de usuarios'); // Sincronizado
 
         $search = trim((string) request('search', ''));
 
@@ -33,18 +34,18 @@ class UserController extends Controller
 
         $rolesQuery = Role::query()->orderBy('name');
 
-        if (!auth()->user()->hasRole('Super Admin')) {
-            $rolesQuery->where('name', '!=', 'Super Admin');
+        if (!auth()->user()->hasRole('SUPER ADMIN')) {
+            $rolesQuery->where('name', '!=', 'SUPER ADMIN');
         }
 
-       $roles = $rolesQuery->get(['id', 'name']);
+        $roles = $rolesQuery->get(['id', 'name']);
 
         return view('admin.users.index', compact('users', 'roles', 'search'));
     }
 
     public function store(Request $request)
     {
-        $this->authorize('crear_usuarios');
+        $this->authorize('Guardar usuario'); // Sincronizado
 
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:100'],
@@ -64,10 +65,10 @@ class UserController extends Controller
 
         $role = Role::findOrFail((int) $request->input('role_id'));
 
-        if ($role->name === 'Super Admin' && !auth()->user()->hasRole('Super Admin')) {
+        if ($role->name === 'SUPER ADMIN' && !auth()->user()->hasRole('SUPER ADMIN')) {
             return redirect()
                 ->route('admin.users.index')
-                ->withErrors(['role_id' => 'No tienes permiso para asignar el rol de Super Admin.'])
+                ->withErrors(['role_id' => 'No tienes permiso para asignar el rol de SUPER ADMIN.'])
                 ->withInput();
         }
 
@@ -83,7 +84,6 @@ class UserController extends Controller
             $user->save();
         }
 
-       // $role = Role::query()->findOrFail((int) $request->input('role_id'));
         $user->syncRoles([$role->name]);
 
         return redirect()
@@ -93,9 +93,16 @@ class UserController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $this->authorize('editar_usuarios');
+        $this->authorize('Actualizar usuario'); // Sincronizado
 
         $user = User::query()->findOrFail($id);
+
+        if ($user->hasRole('SUPER ADMIN')) {
+            $currentRole = $user->roles->first();
+            if ($currentRole) {
+                $request->merge(['role_id' => $currentRole->id]);
+            }
+        }
 
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:100'],
@@ -115,10 +122,10 @@ class UserController extends Controller
 
         $role = Role::findOrFail((int) $request->input('role_id'));
 
-        if ($role->name === 'Super Admin' && !auth()->user()->hasRole('Super Admin')) {
+        if ($role->name === 'SUPER ADMIN' && !auth()->user()->hasRole('SUPER ADMIN') && !$user->hasRole('SUPER ADMIN')) {
             return redirect()
                 ->route('admin.users.index')
-                ->withErrors(['role_id' => 'No tienes permiso para asignar el rol de Super Admin.'])
+                ->withErrors(['role_id' => 'No tienes permiso para asignar el rol de SUPER ADMIN.'])
                 ->withInput();
         }
 
@@ -130,18 +137,19 @@ class UserController extends Controller
         if (filled($request->input('password'))) {
             $payload['password'] = $request->input('password');
         }
+
         if ($request->hasFile('avatar')) {
-        // Borrar anterior
-        if ($user->avatar) {
-            Storage::disk('public')->delete($user->avatar);
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+            $payload['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
-        $payload['avatar'] = $request->file('avatar')->store('avatars', 'public');
-    }
 
         $user->update($payload);
 
-        //$role = Role::query()->findOrFail((int) $request->input('role_id'));
-        $user->syncRoles([$role->name]);
+        if (!$user->hasRole('SUPER ADMIN') || auth()->user()->hasRole('SUPER ADMIN')) {
+            $user->syncRoles([$role->name]);
+        }
 
         return redirect()
             ->route('admin.users.index')
@@ -150,7 +158,7 @@ class UserController extends Controller
 
     public function destroy(string $id)
     {
-        $this->authorize('eliminar_usuarios');
+        $this->authorize('Eliminar usuario'); // Sincronizado
         $user = User::query()->findOrFail($id);
 
         if ((int) $user->id === (int) Auth::id()) {
@@ -159,10 +167,10 @@ class UserController extends Controller
                 ->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
-        if ($user->hasRole('Super Admin')) {
+        if ($user->hasRole('SUPER ADMIN')) {
             return redirect()
                 ->route('admin.users.index')
-                ->with('error', 'No es posible eliminar a un usuario con rol de Super Admin.');
+                ->with('error', 'No es posible eliminar a un usuario con rol de SUPER ADMIN.');
         }
 
         $user->delete();

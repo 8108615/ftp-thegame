@@ -84,7 +84,8 @@
                                             <span class="input-group-text"><i class="bi bi-cash-stack"></i></span>
                                             <select id="divisa" class="form-select" name="divisa" required>
                                                 <option value="">Seleccione una divisa</option>
-                                                @foreach ($divisas ?? [] as $codigo => $divisa)
+                                                {{-- Bucle corregido y limpio --}}
+                                                @foreach ($divisas as $codigo => $divisa)
                                                     <option value="{{ $codigo }}"
                                                         {{ old('divisa', $configuracion->divisa ?? '') === $codigo ? 'selected' : '' }}>
                                                         {{ $codigo }} - {{ $divisa['name'] ?? $codigo }}
@@ -183,7 +184,8 @@
                     </div>
 
                     <div class="mt-3 d-flex justify-content-end">
-                        @can('editar_ajustes')
+                        {{-- Permiso actualizado sincronizado con las rutas --}}
+                        @can('Editar ajustes')
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check2-circle"></i> Guardar ajustes
                             </button>

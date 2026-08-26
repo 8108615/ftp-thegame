@@ -47,14 +47,14 @@ return [
             'report' => false,
         ],
 
-        'videos_d' => [
+        'LIGA_BOLIVIANA_d' => [
             'driver' => 'local',
-            'root'   => 'D:/videos', // Cambiado a barra normal
+            'root'   => 'D:/', // Cambiado a barra normal
             'throw'  => false,
         ],
-        'videos_e' => [
+        'COMPLETOS_f' => [
             'driver' => 'local',
-            'root'   => 'E:/videos 1', // Cambiado a barra normal
+            'root'   => 'F:/', // Cambiado a barra normal
             'throw'  => false,
         ],
 

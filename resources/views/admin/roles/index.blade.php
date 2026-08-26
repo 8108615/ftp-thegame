@@ -18,8 +18,8 @@
 @section('content')
     <div class="page-heading">
         <div class="d-flex justify-content-between align-items-center">
+            <h3>Roles</h3>
             @can('Guardar rol')
-                <h3>Roles</h3>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
                     <i class="bi bi-plus-circle"></i> Nuevo rol
                 </button>
@@ -87,7 +87,6 @@
                                                     </a>
                                                 @endcan
 
-
                                                 @can('Eliminar rol')
                                                     @php
                                                         // Ajusta 'SUPER ADMIN' al nombre exacto que tengas en tu BD
@@ -95,17 +94,14 @@
                                                     @endphp
 
                                                     <button type="button"
-                                                            class="btn btn-sm btn-danger"
-                                                            data-bs-toggle="{{ $isSuperAdminRole ? '' : 'modal' }}"
-                                                            data-bs-target="#deleteRoleModal-{{ $rol->id }}"
-                                                            {{ $isSuperAdminRole ? 'disabled' : '' }}
-                                                            title="{{ $isSuperAdminRole ? 'El rol Super Admin no se puede eliminar' : '' }}">
+                                                        class="btn btn-sm btn-danger"
+                                                        data-bs-toggle="{{ $isSuperAdminRole ? '' : 'modal' }}"
+                                                        data-bs-target="#deleteRoleModal-{{ $rol->id }}"
+                                                        {{ $isSuperAdminRole ? 'disabled' : '' }}
+                                                        title="{{ $isSuperAdminRole ? 'El rol Super Admin no se puede eliminar' : '' }}">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 @endcan
-
-
-
                                             </td>
                                         </tr>
                                     @empty
@@ -137,6 +133,7 @@
         </div>
     </section>
 
+    <!-- Modal Crear Rol -->
     <div class="modal fade" id="createRoleModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <form class="modal-content" method="POST" action="{{ route('admin.roles.store') }}">
@@ -171,6 +168,7 @@
         </div>
     </div>
 
+    <!-- Modales Editar y Eliminar por Rol -->
     @foreach ($roles as $rol)
         <div class="modal fade" id="editRoleModal-{{ $rol->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">

@@ -359,8 +359,9 @@
                     <div class="mt-3">
                         <label>Seleccionar Unidad:</label>
                         <select name="disk" class="form-control" required>
-                            <option value="videos_d">Unidad D (Videos)</option>
-                            <option value="videos_e">Unidad E (Videos 1)</option>
+                            <option value="LIGA_BOLIVIANA_d">Unidad D (ENTELGOL)</option>
+                            <option value="COMPLETOS_f">Unidad F (PARTIDOS CLEAN)</option>
+                            <option value="COMPLETOS_f">Unidad F (PROGRAMAS)</option>
                         </select>
                     </div>
                 </div>

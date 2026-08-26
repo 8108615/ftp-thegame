@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nombre');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('parent_id')->nullable()->constrained('carpetas')->onDelete('cascade');
-            $table->string('disk')->default('videos_d');
+            $table->string('disk')->default('LIGA_BOLIVIANA_d');
             $table->timestamps();
         });
     }

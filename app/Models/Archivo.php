@@ -20,8 +20,8 @@ class Archivo extends Model
 
     public function getTamanoAttribute()
     {
-        // 1. Obtenemos el nombre del disco guardado en la BD (videos_d o videos_e)
-        $diskName = $this->disk ?: 'videos_d';
+        // 1. Obtenemos el nombre del disco guardado en la BD (LIGA_BOLIVIANA_d o COMPLETOS_f)
+        $diskName = $this->disk ?: 'LIGA_BOLIVIANA_d';
 
         // 2. Usamos el Storage de Laravel para obtener la ruta física real
         // Esto funciona aunque el disco sea D: o E:

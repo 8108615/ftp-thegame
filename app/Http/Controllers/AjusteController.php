@@ -11,9 +11,11 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 class AjusteController extends Controller
 {
     use AuthorizesRequests;
+
     public function index()
     {
-        $this->authorize('editar_ajustes');
+        // Sincronizado con la ruta (Ver formulario de ajustes)
+        $this->authorize('Ver formulario de ajustes');
 
         $divisas = $this->getDivisas();
         $configuracion = Ajuste::query()->first();
@@ -23,7 +25,8 @@ class AjusteController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('editar_ajustes');
+        // Sincronizado con la ruta (Editar ajustes)
+        $this->authorize('Editar ajustes');
 
         $divisas = $this->getDivisas();
 

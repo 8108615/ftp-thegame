@@ -19,7 +19,7 @@ class RoleController extends Controller
     }
     public function index()
     {
-        $this->authorize('ver_roles');
+        $this->authorize('Ver listado de roles');
         $search = trim((string) request('search', ''));
 
         $roles = Role::query()
@@ -35,7 +35,7 @@ class RoleController extends Controller
 
     public function editPermissions($id)
     {
-        $this->authorize('editar_roles');
+        $this->authorize('Editar permisos de rol');
 
         $role = Role::findOrFail($id);
         $allPermissions = Permission::all();
@@ -44,7 +44,7 @@ class RoleController extends Controller
 
     public function updatePermissions(Request $request, $id)
     {
-        $this->authorize('editar_roles');
+        $this->authorize('Editar permisos de rol');
         $role = Role::findOrFail($id);
         // syncPermissions elimina los permisos antiguos y asigna solo los nuevos recibidos
         $role->syncPermissions($request->input('permissions', []));
@@ -80,7 +80,7 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('crear_roles');
+        $this->authorize('Guardar rol');
 
         $request->merge([
             'name' => mb_strtoupper(trim((string) $request->input('name')), 'UTF-8'),
@@ -110,7 +110,7 @@ class RoleController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $this->authorize('editar_roles');
+        $this->authorize('Actualizar rol');
 
         $role = Role::query()->findOrFail($id);
 
@@ -140,7 +140,7 @@ class RoleController extends Controller
 
     public function destroy(string $id)
     {
-        $this->authorize('eliminar_roles');
+        $this->authorize('Eliminar rol');
 
         $role = Role::query()->findOrFail($id);
 
