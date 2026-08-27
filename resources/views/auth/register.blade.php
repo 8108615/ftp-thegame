@@ -1,77 +1,70 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Deshabilitado - THE GAME</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow-x: hidden; }
 
-@section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">{{ __('Register') }}</div>
+        .login-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('{{ asset('assets/images/UM_THEGAME.jpeg') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 40px 60px;
+        }
 
-                <div class="card-body">
-                    <form method="POST" action="{{ route('register') }}">
-                        @csrf
+        .floating-card {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 520px;
+            background: rgba(11, 15, 25, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            padding: 50px 45px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+            text-align: center;
+        }
 
-                        <div class="row mb-3">
-                            <label for="name" class="col-md-4 col-form-label text-md-end">{{ __('Name') }}</label>
+        @media (max-width: 768px) {
+            .login-container { justify-content: center; padding: 20px; }
+            .floating-card { max-width: 100%; padding: 35px 25px; }
+        }
+    </style>
+</head>
+<body>
 
-                            <div class="col-md-6">
-                                <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name') }}" required autocomplete="name" autofocus>
+<div class="login-container">
+    <div class="floating-card">
+        <div class="mb-4">
+            <img src="{{ asset('assets/images/logo_thegame.png') }}" alt="Logo" style="width: 320px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));">
+        </div>
 
-                                @error('name')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
+        <h3 style="color: white; font-weight: 600; font-size: 1.6rem; margin-bottom: 12px;">Registro no disponible</h3>
+        <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 30px;">
+            El registro de nuevos usuarios está deshabilitado en este sistema. Si necesitas acceso, por favor comunícate con el administrador.
+        </p>
 
-                        <div class="row mb-3">
-                            <label for="email" class="col-md-4 col-form-label text-md-end">{{ __('Email Address') }}</label>
+        <a href="{{ route('login') }}" class="btn btn-primary w-100 py-3 mb-4" style="background-color: #1d4ed8; border: none; font-weight: 600; font-size: 1rem; border-radius: 10px; text-decoration: none; display: inline-block;">
+            Ir al inicio de sesión
+        </a>
 
-                            <div class="col-md-6">
-                                <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email">
-
-                                @error('email')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <label for="password" class="col-md-4 col-form-label text-md-end">{{ __('Password') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password">
-
-                                @error('password')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <label for="password-confirm" class="col-md-4 col-form-label text-md-end">{{ __('Confirm Password') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="password-confirm" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password">
-                            </div>
-                        </div>
-
-                        <div class="row mb-0">
-                            <div class="col-md-6 offset-md-4">
-                                <button type="submit" class="btn btn-primary">
-                                    {{ __('Register') }}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+        <div style="color: #64748b; font-size: 0.8rem; margin-top: 15px;">
+            © THE GAME. Todos los Derechos Reservados
         </div>
     </div>
 </div>
-@endsection
+
+</body>
+</html>
