@@ -28,7 +28,12 @@ class PermissionSeeder extends Seeder
                             'Descargar archivos',
                             'Editar elementos',
                             'Eliminar elementos',
-                            'Compartir elementos']
+                            'Compartir elementos'
+                        ],
+            'Historial' => [
+                'Ver historial de actividad'
+            ]
+            
         ];
 
         // 1. Crear los permisos

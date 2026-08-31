@@ -37,31 +37,42 @@ class RoleController extends Controller
     {
         $this->authorize('Editar permisos de rol');
 
-        $role = Role::findOrFail($id);
-        $allPermissions = Permission::all();
-        return view('admin.roles.permissions', compact('role', 'allPermissions'));
+        $rol = Role::findOrFail($id);
+        // Si prefieres usar la vista moderna 'permisos', la llamamos directamente aquí también:
+        $permisos = Permission::all()->groupBy(function ($permiso) {
+            if (stripos($permiso->name, 'Ajustes') !== false) return 'Ajustes';
+            if (stripos($permiso->name, 'rol') !== false) return 'Roles';
+            if (stripos($permiso->name, 'usuario') !== false) return 'Usuarios';
+            if (stripos($permiso->name, 'historial') !== false) return 'Historial';
+            return 'Archivos';
+        });
+
+        return view('admin.roles.permisos', compact('rol', 'permisos'));
     }
 
     public function updatePermissions(Request $request, $id)
     {
         $this->authorize('Editar permisos de rol');
-        $role = Role::findOrFail($id);
-        // syncPermissions elimina los permisos antiguos y asigna solo los nuevos recibidos
-        $role->syncPermissions($request->input('permissions', []));
+        $rol = Role::findOrFail($id);
+        
+        // Sincronizamos usando $request->permisos para estandarizar con la vista
+        $rol->syncPermissions($request->permisos ?? []);
 
-        return redirect()->route('admin.roles.index')->with('success', 'Permisos actualizados correctamente.');
+        return redirect()->route('admin.roles.index')
+            ->with('mensaje', 'Permisos actualizados correctamente.')
+            ->with('icono', 'success');
     }
 
     public function permisos(string $id)
     {
         $rol = Role::findOrFail($id);
 
-        // Obtenemos todos los permisos y los agrupamos para mostrarlos bonito
         $permisos = Permission::all()->groupBy(function ($permiso) {
             if (stripos($permiso->name, 'Ajustes') !== false) return 'Ajustes';
             if (stripos($permiso->name, 'rol') !== false) return 'Roles';
             if (stripos($permiso->name, 'usuario') !== false) return 'Usuarios';
-            return 'Archivos'; // Todo lo relacionado a carpetas/archivos cae aquí
+            if (stripos($permiso->name, 'historial') !== false) return 'Historial';
+            return 'Archivos';
         });
 
         return view('admin.roles.permisos', compact('rol', 'permisos'));
@@ -70,11 +81,10 @@ class RoleController extends Controller
     public function updatePermisos(Request $request, string $id)
     {
         $rol = Role::findOrFail($id);
-        // Sincroniza los permisos seleccionados en los checkboxes
-        $rol->syncPermissions($request->permisos);
+        $rol->syncPermissions($request->permisos ?? []);
 
         return redirect()->route('admin.roles.index')
-            ->with('mensaje', 'Permisos actualizados correctamente')
+            ->with('mensaje', 'Permisos actualizados correctamente.')
             ->with('icono', 'success');
     }
 

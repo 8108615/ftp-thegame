@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Facades\Process;
 
 class CarpetaController extends Controller
 {
@@ -99,19 +100,19 @@ class CarpetaController extends Controller
             $discosARecorrer = ['LIGA_BOLIVIANA_d', 'COMPLETOS_f'];
             // Lista de carpetas del sistema que NUNCA debemos sincronizar
             $carpetasIgnoradas = ['$RECYCLE.BIN', 'System Volume Information', 'Recovery', 'System.sav'];
-            
+
             foreach ($discosARecorrer as $diskName) {
                 $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
                 $directoriosReales = $disk->directories(''); // Raíz del disco físico
 
                 foreach ($directoriosReales as $dir) {
                     $nombreCarpeta = basename($dir);
-                    
+
                     // Si la carpeta está en la lista negra o empieza con '$', la ignoramos
                     if (in_array($nombreCarpeta, $carpetasIgnoradas) || str_starts_with($nombreCarpeta, '$')) {
                         continue;
                     }
-                    
+
                     // Verificamos si ya existe en la BD como carpeta raíz en este disco específico
                     $existe = \App\Models\Carpeta::where('nombre', $nombreCarpeta)
                         ->whereNull('parent_id')
@@ -329,22 +330,17 @@ class CarpetaController extends Controller
         $archivosData = $request->input('archivos');
         $carpetasData = $request->input('carpetas');
 
-        // 2. Limpiar los datos (convierte cualquier cosa en un array de IDs)
         $parsear = function($data) {
             if (empty($data)) return [];
-            // Si es array, devolverlo tal cual
             if (is_array($data)) return $data;
-            // Si es string (ej: "3,16" o "[3,16]"), limpiar caracteres basura
             $limpio = str_replace(['[', ']', '"', "'"], '', $data);
             return explode(',', $limpio);
         };
 
         $ids = $parsear($archivosData);
         $carpetaIds = $parsear($carpetasData);
-
         $userId = Auth::id();
 
-        // 3. Consulta maestra (dueño o compartido)
         $todos = Archivo::whereIn('id', $ids)
             ->orWhereIn('carpeta_id', $carpetaIds)
             ->where(function($query) use ($userId) {
@@ -356,33 +352,18 @@ class CarpetaController extends Controller
             ->get();
 
         if ($todos->isEmpty()) {
-            return back()->with('error', 'No tienes permisos sobre los archivos seleccionados.');
+            return response()->json(['error' => 'No se encontraron archivos válidos para descargar.'], 404);
         }
 
-        $zip = new ZipArchive;
-        $zipFileName = 'descarga_' . time() . '.zip';
-        $tempPath = storage_path('app/temp');
-        $zipPath = $tempPath . '/' . $zipFileName;
+        $urlsDescarga = [];
 
-        if (!file_exists($tempPath)) mkdir($tempPath, 0755, true);
-
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-            foreach ($todos as $archivo) {
-                $disk = \Illuminate\Support\Facades\Storage::disk($archivo->disk);
-
-                if ($disk->exists($archivo->ruta)) {
-                    // Obtenemos el contenido del archivo desde el disco correcto
-                    $contenido = $disk->get($archivo->ruta);
-                    // Lo agregamos al ZIP por nombre
-                    $zip->addFromString($archivo->nombre, $contenido);
-                }
-            }
-            $zip->close();
+        foreach ($todos as $arch) {
+            // Ya NO guardamos aquí para evitar el registro doble.
+            // Generamos la ruta web de descarga individual para cada archivo
+            $urlsDescarga[] = route('archivo.download', $arch->id);
         }
 
-        return file_exists($zipPath)
-            ? response()->download($zipPath)->deleteFileAfterSend(true)
-            : back()->with('error', 'No se pudo generar el archivo ZIP.');
+        return response()->json(['urls' => $urlsDescarga]);
     }
 
     public function renombrar(Request $request)
@@ -647,8 +628,31 @@ class CarpetaController extends Controller
 
         // 4. Diagnóstico: ¿Existe el archivo físico en ESE disco?
         if (!$disk->exists($archivo->ruta)) {
+            // Registrar intento fallido
+            \App\Models\HistoriaActividad::create([
+                'user_id' => auth()->id(),
+                'accion' => 'DESCARGA', // O DESCARGA_INDIVIDUAL
+                'nombre_archivo' => $archivo->nombre,
+                'ruta_archivo' => $archivo->ruta,
+                'estado' => 'FALLIDO',
+                'ip_conexion' => request()->ip(),
+                'fecha_hora' => \Carbon\Carbon::now(),
+            ]);
             dd("Error: El archivo físico no existe en el disco '$diskName'. Ruta buscada: " . $archivo->ruta);
         }
+
+        // ==========================================
+        // REGISTRAMOS LA DESCARGA INDIVIDUAL EXITOSA
+        // ==========================================
+        \App\Models\HistoriaActividad::create([
+            'user_id' => auth()->id(),
+            'accion' => 'DESCARGA', // Aquí puedes poner 'DESCARGA' o 'DESCARGA_INDIVIDUAL'
+            'nombre_archivo' => $archivo->nombre,
+            'ruta_archivo' => $archivo->ruta,
+            'estado' => 'EXITOSO',
+            'ip_conexion' => request()->ip(),
+            'fecha_hora' => \Carbon\Carbon::now(),
+        ]);
 
         // 5. Descarga exitosa
         return response()->file($disk->path($archivo->ruta), [
@@ -672,7 +676,7 @@ class CarpetaController extends Controller
         // 2. Obtenemos la ruta absoluta física en el disco (más eficiente y seguro para saltos grandes)
         $filePath = $disk->path($archivo->ruta);
         $size = filesize($filePath);
-        
+
         $start = 0;
         $end = $size - 1;
 
@@ -680,9 +684,9 @@ class CarpetaController extends Controller
         if (isset($_SERVER['HTTP_RANGE'])) {
             $range = str_replace('bytes=', '', $_SERVER['HTTP_RANGE']);
             $rangeParts = explode('-', $range);
-            
+
             $start = intval($rangeParts[0]);
-            
+
             if (isset($rangeParts[1]) && is_numeric($rangeParts[1])) {
                 $end = intval($rangeParts[1]);
             }
@@ -713,14 +717,14 @@ class CarpetaController extends Controller
             while (!feof($stream) && $bytesSent < $length) {
                 $readLength = min($bufferSize, $length - $bytesSent);
                 $buffer = fread($stream, $readLength);
-                
+
                 if ($buffer === false) {
                     break;
                 }
 
                 echo $buffer;
                 flush();
-                
+
                 $bytesSent += strlen($buffer);
             }
 

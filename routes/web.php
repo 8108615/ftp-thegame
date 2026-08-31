@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CarpetaController;
+use App\Http\Controllers\HistorialController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -62,6 +63,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::post('/admin/archivos/eliminar', [CarpetaController::class, 'eliminar'])->name('admin.archivos.eliminar')->middleware( 'can:Eliminar elementos');
     Route::post('/admin/archivos/mover', [CarpetaController::class, 'mover'])->name('admin.archivos.mover')->middleware( 'can:Editar elementos');
     Route::get('/admin/archivos/stream/{id}', [CarpetaController::class, 'streamVideo'])->name('admin.archivos.stream')->middleware( 'can:Descargar archivos');
+
+    // Rutas para Historial de Actividad
+    Route::get('/admin/historial', [HistorialController::class, 'index'])->name('admin.historial.index')->middleware('can:Ver historial de actividad');
 
 });
 
