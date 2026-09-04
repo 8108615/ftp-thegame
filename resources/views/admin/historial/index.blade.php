@@ -124,6 +124,10 @@
                                 <td>
                                     @if($item->estado == 'EXITOSO')
                                         <span class="text-success fw-bold">Exitoso</span>
+                                    @elseif($item->estado == 'PROCESANDO DESCARGA')
+                                        <span class="text-warning fw-bold">Procesando Descarga</span>
+                                    @elseif($item->estado == 'CANCELADO')
+                                        <span class="text-info fw-bold">Cancelado</span>
                                     @else
                                         <span class="text-danger fw-bold">Fallido</span>
                                     @endif

@@ -614,24 +614,18 @@ class CarpetaController extends Controller
             return back()->with('error', "No se encontró el archivo con ID $id.");
         }
 
-        // 2. Determinamos el disco dinámicamente desde la BD.
-        // Si tu columna en BD se llama de otra forma, cambia 'disk' por el nombre correcto.
-        // Si algún archivo antiguo no tiene esta columna, ponemos 'LIGA_BOLIVIANA_d' como respaldo (fallback).
         $diskName = $archivo->disk ?? 'LIGA_BOLIVIANA_d';
 
-        // 3. Verificamos que el disco configurado exista realmente en config/filesystems.php
         if (!config()->has("filesystems.disks.{$diskName}")) {
             dd("Error: El disco '$diskName' no está definido en config/filesystems.php");
         }
 
         $disk = \Illuminate\Support\Facades\Storage::disk($diskName);
 
-        // 4. Diagnóstico: ¿Existe el archivo físico en ESE disco?
         if (!$disk->exists($archivo->ruta)) {
-            // Registrar intento fallido
             \App\Models\HistoriaActividad::create([
                 'user_id' => auth()->id(),
-                'accion' => 'DESCARGA', // O DESCARGA_INDIVIDUAL
+                'accion' => 'DESCARGA',
                 'nombre_archivo' => $archivo->nombre,
                 'ruta_archivo' => $archivo->ruta,
                 'estado' => 'FALLIDO',
@@ -641,23 +635,74 @@ class CarpetaController extends Controller
             dd("Error: El archivo físico no existe en el disco '$diskName'. Ruta buscada: " . $archivo->ruta);
         }
 
-        // ==========================================
-        // REGISTRAMOS LA DESCARGA INDIVIDUAL EXITOSA
-        // ==========================================
-        \App\Models\HistoriaActividad::create([
+        $rutaFisica = $disk->path($archivo->ruta);
+        $nombreArchivo = $archivo->nombre;
+        $mimeType = $archivo->mime_type ?: 'video/mp4';
+
+        // 2. Creamos el registro indicando que la descarga ha comenzado
+        $historial = \App\Models\HistoriaActividad::create([
             'user_id' => auth()->id(),
-            'accion' => 'DESCARGA', // Aquí puedes poner 'DESCARGA' o 'DESCARGA_INDIVIDUAL'
-            'nombre_archivo' => $archivo->nombre,
+            'accion' => 'DESCARGA',
+            'nombre_archivo' => $nombreArchivo,
             'ruta_archivo' => $archivo->ruta,
-            'estado' => 'EXITOSO',
+            'estado' => 'PROCESANDO DESCARGA',
             'ip_conexion' => request()->ip(),
             'fecha_hora' => \Carbon\Carbon::now(),
         ]);
 
-        // 5. Descarga exitosa
-        return response()->file($disk->path($archivo->ruta), [
-            'Content-Type' => $archivo->mime_type ?: 'video/mp4',
-            'Content-Disposition' => 'attachment; filename="' . $archivo->nombre . '"',
+        // 3. Configuramos un shutdown function de seguridad:
+        // Si el script muere y el estado sigue en 'PROCESANDO DESCARGA', lo cambia a 'CANCELADO'
+        register_shutdown_function(function() use ($historial) {
+            // Refrescamos el modelo desde la BD para ver el estado actual
+            $historial->refresh();
+            if ($historial->estado === 'PROCESANDO DESCARGA') {
+                $historial->update(['estado' => 'CANCELADO']);
+            }
+        });
+
+        // 4. Transmisión controlada por bloques
+        return response()->stream(function () use ($rutaFisica, $historial) {
+            set_time_limit(0);
+
+            $stream = fopen($rutaFisica, 'r');
+
+            if ($stream === false) {
+                $historial->update(['estado' => 'CANCELADO']);
+                return;
+            }
+
+            while (!feof($stream)) {
+                if (connection_aborted() || (connection_status() != CONNECTION_NORMAL)) {
+                    break;
+                }
+
+                $buffer = fread($stream, 512 * 1024);
+                if ($buffer === false) {
+                    break;
+                }
+
+                echo $buffer;
+
+                if (ob_get_level() > 0) {
+                    @ob_flush();
+                }
+                @flush();
+
+                if (connection_aborted() || (connection_status() != CONNECTION_NORMAL)) {
+                    break;
+                }
+            }
+
+            fclose($stream);
+
+            // Si el bucle finaliza de manera natural y completa
+            $historial->update(['estado' => 'EXITOSO']);
+
+        }, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'attachment; filename="' . $nombreArchivo . '"',
+            'Content-Length' => filesize($rutaFisica),
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 
