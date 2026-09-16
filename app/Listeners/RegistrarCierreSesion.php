@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use App\Models\HistoriaActividad;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cookie;
 
 class RegistrarCierreSesion
 {
@@ -23,7 +24,6 @@ class RegistrarCierreSesion
      */
     public function handle(Logout $event): void
     {
-        // Verificamos que haya un usuario autenticado al momento de salir
         if ($event->user) {
             HistoriaActividad::create([
                 'user_id' => $event->user->id,
@@ -35,5 +35,8 @@ class RegistrarCierreSesion
                 'fecha_hora' => Carbon::now(),
             ]);
         }
+
+        // Borramos la cookie testigo porque el cierre fue voluntario
+        Cookie::queue(Cookie::forget('tracking_user_id'));
     }
 }

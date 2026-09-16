@@ -89,6 +89,8 @@
                                         <span class="badge bg-success">Inicio de Sesión</span>
                                     @elseif ($item->accion == 'CIERRE_SESION')
                                         <span class="badge bg-secondary">Cierre de Sesión</span>
+                                    @elseif ($item->accion == 'SESION_EXPIRADA')
+                                        <span class="badge bg-warning text-dark">Sesión Expirada</span>
                                     @else
                                         <span class="badge bg-primary">{{ $item->accion }}</span>
                                     @endif
@@ -96,10 +98,12 @@
 
                                 <!-- Columna 4: Detalle / Archivo -->
                                 <td>
-                                    @if ($item->accion == 'INICIO_SESION')
+                                   @if ($item->accion == 'INICIO_SESION')
                                         <span class="text-success fw-semibold"><i class="bi bi-box-arrow-in-right me-1"></i> Inicio de Sesión</span>
                                     @elseif ($item->accion == 'CIERRE_SESION')
                                         <span class="text-secondary fw-semibold"><i class="bi bi-box-arrow-right me-1"></i> Cierre de Sesión</span>
+                                    @elseif ($item->accion == 'SESION_EXPIRADA')
+                                        <span class="text-warning fw-semibold"><i class="bi bi-clock-history me-1"></i> Expirada por Inactividad</span>
                                     @else
                                         @php
                                             $rutaCompleta = $item->ruta_archivo ?? '';
