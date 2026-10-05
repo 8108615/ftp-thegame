@@ -22,23 +22,31 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        $cacheKey = 'user_logged_' . $user->id;
+        // =========================================================================
+        // SUGERENCIA (Comentada): Si en el futuro deseas que los SUPER ADMIN puedan 
+        // iniciar sesión en múltiples navegadores/dispositivos sin que el sistema los bote,
+        // puedes descomentar la siguiente línea de condición:
+        // =========================================================================
+        if (!$user->hasRole('SUPER ADMIN')) {
 
-        // 1. Verificamos si ya existe una sesión activa registrada en caché para este usuario
-        if (Cache::has($cacheKey)) {
-            // Cerramos la sesión que acaba de intentar entrar
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            $cacheKey = 'user_logged_' . $user->id;
 
-            // Redirigimos al login con un mensaje de error
-            return redirect()->route('login')
-                ->with('error', 'Este usuario ya tiene una sesión activa en otro dispositivo o navegador.');
-        }
+            // 1. Verificamos si ya existe una sesión activa registrada en caché para este usuario
+            if (Cache::has($cacheKey)) {
+                // Cerramos la sesión que acaba de intentar entrar
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
 
-        // 2. Si no está activo en otro lado, guardamos en caché que este usuario está conectado
-        // (El tiempo en minutos debe coincidir o ser cercano al tiempo de vida de tus sesiones, por ejemplo 120 minutos)
-        Cache::put($cacheKey, true, now()->addMinutes(1440));
+                // Redirigimos al login con un mensaje de error
+                return redirect()->route('login')
+                    ->with('error', 'Este usuario ya tiene una sesión activa en otro Dispositivo o Navegador.');
+            }
+
+            // 2. Si no está activo en otro lado, guardamos en caché que este usuario está conectado
+            Cache::put($cacheKey, true, now()->addMinutes(1440));
+
+        } // <-- Cierre del if de la sugerencia para SUPER ADMIN
     }
 
     public function logout(Request $request)
