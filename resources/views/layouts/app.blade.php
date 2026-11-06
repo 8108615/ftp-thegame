@@ -21,7 +21,7 @@
 
 <body>
     @php
-        $isLoginPage = request()->routeIs('login');
+        $isLoginPage = request()->routeIs('login', 'password.request');
     @endphp
 
     <div id="app">

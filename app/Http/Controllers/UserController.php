@@ -45,6 +45,7 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+
         $this->authorize('Guardar usuario'); // Sincronizado
 
         $validator = Validator::make($request->all(), [
@@ -86,9 +87,19 @@ class UserController extends Controller
 
         $user->syncRoles([$role->name]);
 
+        // ==========================================
+        // 2. PARA ENVIAR EL CORREO:
+        // ==========================================
+        try {
+            // Le pasamos la contraseña plana que el usuario digitó en el formulario
+            $user->notify(new \App\Notifications\NuevoUsuarioFtpNotification($request->input('password')));
+        } catch (\Exception $e) {
+            // Si falla el envío por red, no detenemos el sistema, pero podemos registrar el error si deseas
+        }
+
         return redirect()
             ->route('admin.users.index')
-            ->with('success', 'Usuario creado correctamente.');
+            ->with('success', 'Usuario creado correctamente y credenciales enviadas por correo.');
     }
 
     public function update(Request $request, string $id)
@@ -149,6 +160,21 @@ class UserController extends Controller
 
         if (!$user->hasRole('SUPER ADMIN') || auth()->user()->hasRole('SUPER ADMIN')) {
             $user->syncRoles([$role->name]);
+        }
+
+        // ==========================================
+        // NOTIFICACIÓN DE ACTUALIZACIÓN POR CORREO
+        // ==========================================
+        if (filled($request->input('password')) || $user->wasChanged('email')) {
+            try {
+                $passwordNotification = filled($request->input('password')) 
+                    ? $request->input('password') 
+                    : 'Su contraseña de acceso se mantiene sin cambios (utilice la misma que ya tenía asignada).';
+
+                $user->notify(new \App\Notifications\UsuarioActualizadoFtpNotification($passwordNotification));
+            } catch (\Exception $e) {
+                // Si falla la red, no rompemos el flujo de actualización
+            }
         }
 
         return redirect()

@@ -244,8 +244,8 @@
                                 <i class="bi bi-play-circle" style="font-size: 3rem; color: #fff; cursor: pointer; position: absolute;"
                                 onclick="this.style.display='none'; this.nextElementSibling.style.display='block'; this.nextElementSibling.play();"></i>
 
-                                <video width="100%" height="100%" controls style="object-fit: contain; display: none;" preload="none">
-                                    <source src="{{ route('archivo.download', $archivo->id) }}" type="{{ $mime }}">
+                                <video width="100%" height="100%" controls style="object-fit: contain; display: none;" preload="metadata">
+                                    <source src="{{ url('/admin/archivos/stream/' . $archivo->id) }}" type="{{ $mime }}">
                                 </video>
                             </div>
                         @elseif(str_contains($mime, 'image'))
