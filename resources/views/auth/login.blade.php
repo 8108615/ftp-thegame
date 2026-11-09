@@ -69,7 +69,7 @@
     <div class="floating-card">
         <div class="text-center mb-4">
             <!-- Logo más grande y llamativo -->
-            <img src="{{ asset('assets/images/logo_thegame.png') }}" alt="Logo" style="width: 450px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));">
+            <img src="{{ asset('assets/images/logo_thegame.png') }}" alt="Logo" style="width: 300px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));">
             <h3 style="color: white; font-weight: 600; font-size: 1.8rem; margin-bottom: 8px;">Iniciar sesión</h3>
             <p style="color: #94a3b8; font-size: 0.95rem;">Accede a tu cuenta para continuar</p>
         </div>

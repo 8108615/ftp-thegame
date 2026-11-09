@@ -77,30 +77,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-md-6 col-12">
-                                    <div class="form-group">
-                                        <label for="divisa">Divisa</label><b> (*)</b>
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text"><i class="bi bi-cash-stack"></i></span>
-                                            <select id="divisa" class="form-select" name="divisa" required>
-                                                <option value="">Seleccione una divisa</option>
-                                                {{-- Bucle corregido y limpio --}}
-                                                @foreach ($divisas as $codigo => $divisa)
-                                                    <option value="{{ $codigo }}"
-                                                        {{ old('divisa', $configuracion->divisa ?? '') === $codigo ? 'selected' : '' }}>
-                                                        {{ $codigo }} - {{ $divisa['name'] ?? $codigo }}
-                                                        @if (!empty($divisa['symbol']))
-                                                            ({{ $divisa['symbol'] }})
-                                                        @endif
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        @error('divisa')
-                                            <small class="text-danger">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                </div>
+                                
 
                                 <div class="col-12">
                                     <div class="form-group">

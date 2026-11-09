@@ -663,15 +663,36 @@
             $('.archivo-check:checked').each(function() { archivos.push($(this).val()); });
             $('.carpeta-check:checked').each(function() { carpetas.push($(this).val()); });
 
-            // AQUÍ ESTÁ EL CAMBIO CRUCIAL:
-            // .join(',') convierte [3, 16] en el texto plano "3,16"
-            $('#inputArchivos').val(archivos.join(','));
-            $('#inputCarpetas').val(carpetas.join(','));
+            // Enviamos los datos por AJAX en lugar de hacer submit al formulario tradicional
+            $.ajax({
+                url: '{{ route('admin.archivos.descargarMasivo') }}',
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    archivos: archivos.join(','),
+                    carpetas: carpetas.join(',')
+                },
+                success: function(response) {
+                    if (response.urls && response.urls.length > 0) {
+                        // Iteramos sobre cada URL devuelta y disparamos la descarga
+                        response.urls.forEach((url, index) => {
+                            setTimeout(() => {
+                                let iframe = document.createElement('iframe');
+                                iframe.style.display = 'none';
+                                iframe.src = url;
+                                document.body.appendChild(iframe);
+                                // Limpiamos el iframe después de un momento
+                                setTimeout(() => { iframe.remove(); }, 10000);
+                            }, index * 1000); // Pequeño retraso de 1s entre descargas para no saturar el navegador
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire('Error', 'No se pudieron procesar las descargas seleccionadas.', 'error');
+                }
+            });
 
-            // Enviamos
-            $('#formDescargaMasiva').submit();
-
-            // Limpiamos
+            // Limpiamos la selección visual
             setTimeout(() => {
                 $('.archivo-check, .carpeta-check').prop('checked', false);
                 $('#downloadSelectedBtn').addClass('d-none');
